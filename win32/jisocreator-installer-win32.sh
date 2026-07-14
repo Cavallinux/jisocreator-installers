@@ -11,14 +11,13 @@ if [ "$#" -lt 1 ]; then
 fi
 
 VERSION=$1
-APP_NAME="JISOCreator"
+APP_NAME="jisocreator"
 ORIGINAL_DIR=$(pwd)
 
 # Permite pasar una URL personalizada como segundo argumento.
 # Si no se pasa, construye la URL de los Releases de GitHub automáticamente.
 # Ajusta "windows.zip" según cómo se llame el artefacto que subes a GitHub.
 DEFAULT_URL=https://github.com/Cavallinux/jisocreator/releases/download/v${VERSION}/jisocreator-${VERSION}-win32.win32.x86_64.zip
-#DEFAULT_URL="https://github.com/Cavallinux/jisocreator/releases/download/v${VERSION}/jisocreator-${VERSION}-windows.x86_64.zip"
 DOWNLOAD_URL=${2:-$DEFAULT_URL}
 
 echo "=================================================="
@@ -73,19 +72,26 @@ echo "📝 Generando script NSIS al vuelo..."
 # se inyectan solas, pero las variables de NSIS como \$INSTDIR llevan una barra
 # invertida para que bash no las reemplace.
 cat <<EOF > build.nsi
-OutFile "$ORIGINAL_DIR/${APP_NAME}-Installer-v${VERSION}.exe"
+OutFile "$ORIGINAL_DIR/${APP_NAME}-v${VERSION}-setup.exe"
 Name "$APP_NAME $VERSION"
 InstallDir "\$PROGRAMFILES64\\$APP_NAME"
 RequestExecutionLevel admin
 
 !include "MUI2.nsh"
 !insertmacro MUI_PAGE_WELCOME
+!insertmacro MUI_PAGE_LICENSE "$ORIGINAL_DIR/license.txt"
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES
 !insertmacro MUI_PAGE_FINISH
 !insertmacro MUI_UNPAGE_CONFIRM
 !insertmacro MUI_UNPAGE_INSTFILES
 !insertmacro MUI_LANGUAGE "Spanish"
+!insertmacro MUI_LANGUAGE "English"
+
+Function .onInit
+  ; Display the language selection dialog
+  !insertmacro MUI_LANGDLL_DISPLAY
+FunctionEnd
 
 Section "Instalar"
   SetOutPath "\$INSTDIR"
@@ -96,15 +102,16 @@ Section "Instalar"
 
   SetOutPath "\$INSTDIR\\lib"
   File "$BASE_EXTRACT_DIR/lib/*.jar"
+  File "$ORIGINAL_DIR/jisocreator.ico"
 
   SetOutPath "\$INSTDIR"
   WriteUninstaller "\$INSTDIR\\uninstall.exe"
 
   ; Rutas de Windows llevan doble backslash (\\) en el script generado
   CreateDirectory "\$SMPROGRAMS\\$APP_NAME"
-  CreateShortCut "\$SMPROGRAMS\\$APP_NAME\\$APP_NAME.lnk" "\$INSTDIR\\jisocreator.bat" "" "\$INSTDIR\\$JAR_FILENAME" 0
+  CreateShortCut "\$SMPROGRAMS\\$APP_NAME\\$APP_NAME.lnk" "\$INSTDIR\\jisocreator.bat" "" "\$INSTDIR\\jisocreator.ico" 0
   CreateShortCut "\$SMPROGRAMS\\$APP_NAME\\Desinstalar.lnk" "\$INSTDIR\\uninstall.exe"
-  CreateShortCut "\$DESKTOP\\$APP_NAME.lnk" "\$INSTDIR\\jisocreator.bat" "" "\$INSTDIR\\$JAR_FILENAME" 0
+  CreateShortCut "\$DESKTOP\\$APP_NAME.lnk" "\$INSTDIR\\jisocreator.bat" "" "\$INSTDIR\\jisocreator.ico" 0
 SectionEnd
 
 Section "Uninstall"
@@ -128,7 +135,7 @@ EOF
 echo "⚙️  Compilando instalador con NSIS..."
 if makensis build.nsi > nsis_build.log; then
     echo "✅ ¡Instalador creado con éxito!"
-    echo "🚀 Archivo generado: ${APP_NAME}-Installer-v${VERSION}.exe"
+    echo "🚀 Archivo generado: ${APP_NAME}-v${VERSION}-setup.exe"
 else
     echo "❌ Error al compilar con NSIS. Revisa el log: $TMP_DIR/nsis_build.log"
     # Salimos sin borrar el temporal para que puedas depurar
