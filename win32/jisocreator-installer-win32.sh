@@ -54,6 +54,15 @@ if ! wget -q --show-progress "$JRE_URL" -O jre.zip; then
     exit 1
 fi
 
+# Asegurar que el banner lateral de NSIS se genere dinámicamente
+if command -v magick &> /dev/null; then
+    echo "🎨 Generando banner lateral de 164x314 para NSIS..."
+    # Corta por la mitad izquierda y redimensiona estrictamente a BMP de 164x314
+    magick $ORIGINAL_DIR/jisocreator.png -crop 50%x100%+0+0 -resize 164x314! $ORIGINAL_DIR/nsis_banner.bmp
+else
+    echo "⚠️ ImageMagick no está instalado. Asegúrate de tener nsis_banner.bmp listo."
+fi
+
 # =========================================================
 # 2. EXTRAER BINARIOS
 # =========================================================
@@ -93,18 +102,26 @@ OutFile "$ORIGINAL_DIR/${APP_NAME}-v${VERSION}-setup.exe"
 Name "$APP_NAME $VERSION"
 InstallDir "\$PROGRAMFILES64\\$APP_NAME"
 RequestExecutionLevel admin
+SetCompressor /SOLID lzma
+
 
 !define MUI_ICON "$ORIGINAL_DIR/jisocreator.ico"
+!define MUI_WELCOMEFINISHPAGE_BITMAP "$ORIGINAL_DIR/nsis_banner.bmp"
 !include "MUI2.nsh"
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_LICENSE "$ORIGINAL_DIR/license.txt"
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES
 !insertmacro MUI_PAGE_FINISH
+!define MUI_ABORTWARNING
 !insertmacro MUI_UNPAGE_CONFIRM
 !insertmacro MUI_UNPAGE_INSTFILES
 !insertmacro MUI_LANGUAGE "Spanish"
 !insertmacro MUI_LANGUAGE "English"
+
+LangString STRING_BRANDING \${LANG_ENGLISH} "$APP_NAME - Version $VERSION"
+LangString STRING_BRANDING \${LANG_SPANISH} "$APP_NAME - Versión $VERSION"
+BrandingText "\$(STRING_BRANDING)"
 
 Function .onInit
   ; Display the language selection dialog
