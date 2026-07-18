@@ -18,6 +18,7 @@ ORIGINAL_DIR=$(pwd)
 # Si no se pasa, construye la URL de los Releases de GitHub automáticamente.
 # Ajusta "windows.zip" según cómo se llame el artefacto que subes a GitHub.
 DEFAULT_URL=https://github.com/Cavallinux/jisocreator/releases/download/v${VERSION}/jisocreator-${VERSION}-win32.win32.x86_64.zip
+JRE_URL=https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.11%2B10/OpenJDK21U-jre_x64_windows_hotspot_21.0.11_10.zip
 DOWNLOAD_URL=${2:-$DEFAULT_URL}
 
 echo "=================================================="
@@ -39,8 +40,15 @@ TMP_DIR=$(mktemp -d -t nsis-build-XXXXXX)
 echo "📁 Directorio temporal de trabajo: $TMP_DIR"
 cd "$TMP_DIR" || exit 1
 
-echo "📥 Descargando binarios desde: $DOWNLOAD_URL"
+echo "📥 Descargando binario de JISOCREATOR desde: $DOWNLOAD_URL"
 if ! wget -q --show-progress "$DOWNLOAD_URL" -O app.zip; then
+    echo "❌ Error: No se pudo descargar el archivo. Verifica la URL o tu conexión."
+    rm -rf "$TMP_DIR"
+    exit 1
+fi
+
+echo "📥 Descargando JRE desde: $JRE_URL"
+if ! wget -q --show-progress "$JRE_URL" -O jre.zip; then
     echo "❌ Error: No se pudo descargar el archivo. Verifica la URL o tu conexión."
     rm -rf "$TMP_DIR"
     exit 1
@@ -51,13 +59,22 @@ fi
 # =========================================================
 echo "📦 Extrayendo archivos..."
 mkdir -p app_ext
+mkdir -p jre_ext
 unzip -q app.zip -d app_ext
+unzip -q jre.zip -d jre_ext
 
-# Detectar si el ZIP tiene una carpeta raíz interior o los archivos sueltos
+# Detectar si el ZIP de JISOCREATOR tiene una carpeta raíz interior o los archivos sueltos
 if [ $(ls -1 app_ext | wc -l) -eq 1 ] && [ -d "app_ext/$(ls -1 app_ext)" ]; then
     BASE_EXTRACT_DIR="app_ext/$(ls -1 app_ext)"
 else
     BASE_EXTRACT_DIR="app_ext"
+fi
+
+# Detectar si el ZIP del jre tiene una carpeta raíz interior o los archivos sueltos
+if [ $(ls -1 jre_ext | wc -l) -eq 1 ] && [ -d "jre_ext/$(ls -1 jre_ext)" ]; then
+    JRE_EXTRACT_DIR="jre_ext/$(ls -1 jre_ext)"
+else
+    JRE_EXTRACT_DIR="jre_ext"
 fi
 
 # Buscar dinámicamente el nombre exacto del archivo JAR
@@ -77,6 +94,7 @@ Name "$APP_NAME $VERSION"
 InstallDir "\$PROGRAMFILES64\\$APP_NAME"
 RequestExecutionLevel admin
 
+!define MUI_ICON "$ORIGINAL_DIR/jisocreator.ico"
 !include "MUI2.nsh"
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_LICENSE "$ORIGINAL_DIR/license.txt"
@@ -99,17 +117,25 @@ Section "Instalar"
   ; Usamos slash normal (/) para indicar rutas de compilación en Linux
   File "$BASE_EXTRACT_DIR/$JAR_FILENAME"
   File "$BASE_EXTRACT_DIR/jisocreator.bat"
+  File "$ORIGINAL_DIR/jisocreator.ico"
 
   SetOutPath "\$INSTDIR\\lib"
   File "$BASE_EXTRACT_DIR/lib/*.jar"
-  File "$ORIGINAL_DIR/jisocreator.ico"
+
+  SetOutPath "\$INSTDIR\\jre"
+  File /r "$JRE_EXTRACT_DIR/*.*"
+
+  SetOutPath "\$INSTDIR\\res\\mkisofs"
+  File "$BASE_EXTRACT_DIR/res/mkisofs/*.ini"
+  File "$BASE_EXTRACT_DIR/res/mkisofs/*.exe"
+  File "$BASE_EXTRACT_DIR/res/mkisofs/*.dll"
 
   SetOutPath "\$INSTDIR"
   WriteUninstaller "\$INSTDIR\\uninstall.exe"
 
   ; Rutas de Windows llevan doble backslash (\\) en el script generado
   CreateDirectory "\$SMPROGRAMS\\$APP_NAME"
-  CreateShortCut "\$SMPROGRAMS\\$APP_NAME\\$APP_NAME.lnk" "\$INSTDIR\\jisocreator.bat" "" "\$INSTDIR\\jisocreator.ico" 0
+  CreateShortCut "\$SMPROGRAMS\\$APP_NAME\\$APP_NAME.lnk" "\$INSTDIR\\jisocreator.bat" "\$INSTDIR\\jisocreator.ico" 0
   CreateShortCut "\$SMPROGRAMS\\$APP_NAME\\Desinstalar.lnk" "\$INSTDIR\\uninstall.exe"
   CreateShortCut "\$DESKTOP\\$APP_NAME.lnk" "\$INSTDIR\\jisocreator.bat" "" "\$INSTDIR\\jisocreator.ico" 0
 SectionEnd
@@ -117,10 +143,18 @@ SectionEnd
 Section "Uninstall"
   Delete "\$INSTDIR\\$JAR_FILENAME"
   Delete "\$INSTDIR\\jisocreator.bat"
+  Delete "\$INSTDIR\\jisocreator.ico"
   Delete "\$INSTDIR\\uninstall.exe"
 
   Delete "\$INSTDIR\\lib\\*.jar"
   RMDir "\$INSTDIR\\lib"
+
+  Delete "\$INSTDIR\\res\\mkisofs\\*.ini"
+  Delete "\$INSTDIR\\res\\mkisofs\\*.exe"
+  Delete "\$INSTDIR\\res\\mkisofs\\*.dll"
+  RMDir /r "\$INSTDIR\\res"
+
+  RMDir /r "\$INSTDIR\\jre"
 
   RMDir "\$INSTDIR"
 
