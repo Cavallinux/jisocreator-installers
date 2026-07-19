@@ -58,7 +58,7 @@ fi
 if command -v magick &> /dev/null; then
     echo "🎨 Generando banner lateral de 164x314 para NSIS..."
     # Corta por la mitad izquierda y redimensiona estrictamente a BMP de 164x314
-    magick $ORIGINAL_DIR/jisocreator.png -crop 50%x100%+0+0 -resize 164x314! $ORIGINAL_DIR/nsis_banner.bmp
+    magick -density 300 $ORIGINAL_DIR/jisocreator.svg -background white -alpha remove -crop 50%x100%+0+0 -resize 164x314! $ORIGINAL_DIR/nsis_banner.bmp
 else
     echo "⚠️ ImageMagick no está instalado. Asegúrate de tener nsis_banner.bmp listo."
 fi
