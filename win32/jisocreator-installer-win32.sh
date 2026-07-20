@@ -5,8 +5,8 @@
 # =========================================================
 if [ "$#" -lt 1 ]; then
     echo "Uso: $0 <VERSION> [URL_CUSTOM]"
-    echo "Ejemplo: $0 0.2.0"
-    echo "Ejemplo con URL: $0 0.2.0 https://mi-dominio.com/jisocreator.zip"
+    echo "Ejemplo: $0 0.2.1"
+    echo "Ejemplo con URL: $0 0.2.1 https://mi-dominio.com/jisocreator.zip"
     exit 1
 fi
 

@@ -1,3 +1,4 @@
+#!/usr/bin/env xdg-open
 [Desktop Entry]
 Name=JISOCreator
 Comment=JIsoCreator is a ISO9660 CD Image creator, frontend of MKISOFS
